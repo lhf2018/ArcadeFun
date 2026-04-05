@@ -1,0 +1,1861 @@
+{# templates/index.html - 完整修复版 #}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ArcadeFun - 虚拟游戏厅</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 2px solid #ffd200;
+        }
+
+        .logo {
+            font-size: 1.8em;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #ffd200, #f7971e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .coin-display {
+            background: rgba(0,0,0,0.6);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: 1px solid #ffd200;
+        }
+
+        .coin-display.win-flash {
+            background: #4CAF50;
+            box-shadow: 0 0 20px #4CAF50;
+            border-color: #fff;
+        }
+
+        .current-game {
+            font-size: 1.1em;
+            color: #ffd200;
+            font-weight: bold;
+        }
+
+        .top-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .top-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .reset-btn {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(244,67,54,0.4);
+        }
+
+        .lobby-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .lobby-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(76,175,80,0.4);
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 游戏大厅 - 全新设计 */
+        .hero-section {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .hero-title {
+            font-size: 3em;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #ffd200, #ff6b6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2em;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .game-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .game-card:hover::before {
+            left: 100%;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: #ffd200;
+        }
+
+        .game-icon {
+            font-size: 4.5em;
+            margin-bottom: 15px;
+        }
+
+        .game-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .game-cost {
+            color: #ffd200;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .leverage-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .leverage-badge.yes {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .leverage-badge.no {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+        }
+
+        .enter-btn {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            border: none;
+            padding: 10px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .enter-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255,210,0,0.4);
+        }
+
+        /* 通用游戏样式 */
+        .game-container {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 40px;
+            margin-top: 20px;
+        }
+
+        .game-title {
+            font-size: 2.5em;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .leverage-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .leverage-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid #ffd200;
+            padding: 10px 20px;
+            margin: 0 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        .leverage-btn.active {
+            background: linear-gradient(135deg, #ffd200, #f7971e);
+            color: #333;
+            transform: scale(1.05);
+        }
+
+        .leverage-btn:hover {
+            background: #ffd200;
+            color: #333;
+            transform: scale(1.05);
+        }
+
+        .play-btn {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 40px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .play-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255,210,0,0.4);
+        }
+
+        .play-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 老虎机样式 */
+        .slots-machine {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .slot-reel {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid #ffd200;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slot-symbol {
+            font-size: 4em;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.5);
+            margin: 8px 0;
+            border-radius: 10px;
+            transition: all 0.1s;
+        }
+
+        .slot-symbol.highlight {
+            background: #ffd200;
+            box-shadow: 0 0 20px #ffd200;
+            transform: scale(1.05);
+        }
+
+        /* 轮盘样式 */
+        .wheel-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            cursor: pointer;
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-top: 50px solid #ffd200;
+            z-index: 10;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+        }
+
+        .wheel-pointer::after {
+            content: '▼';
+            position: absolute;
+            top: -45px;
+            left: -12px;
+            font-size: 20px;
+            color: #ffd200;
+        }
+
+        /* 打气球样式 */
+        .balloon-game-area {
+            background: linear-gradient(180deg, #87CEEB 0%, #98D8E8 100%);
+            border-radius: 20px;
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            cursor: crosshair;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        .balloon {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.1s;
+            animation: float 0.3s ease-out;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .balloon:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes float {
+            from { transform: translateY(0); }
+            to { transform: translateY(-5px); }
+        }
+
+        .balloon-burst {
+            animation: burst 0.2s ease-out;
+        }
+
+        @keyframes burst {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+        }
+
+        .difficulty-btn {
+            padding: 8px 20px;
+            border: 2px solid #ffd200;
+            background: transparent;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .difficulty-btn.active {
+            background: #ffd200;
+            color: #333;
+        }
+
+        /* 宝箱样式 */
+        .chest-container {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .chest {
+            font-size: 150px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .chest:hover {
+            transform: scale(1.1);
+        }
+
+        .chest.chest-open {
+            animation: chestOpen 0.5s ease-out;
+        }
+
+        @keyframes chestOpen {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1); }
+        }
+
+        .reward-history {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+        }
+
+        /* 涨跌猜样式 */
+        .current-number {
+            font-size: 80px;
+            text-align: center;
+            font-weight: bold;
+            margin: 30px 0;
+            padding: 30px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 20px;
+            font-family: monospace;
+        }
+
+        .guess-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .guess-btn {
+            padding: 20px 40px;
+            font-size: 1.5em;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .guess-up {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .guess-down {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .guess-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .trend-chart {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+        }
+
+        canvas {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        /* 扭蛋机样式 */
+        .gacha-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .gacha-machine {
+            flex: 1;
+            text-align: center;
+            padding: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+        }
+
+        .gacha-icon {
+            font-size: 120px;
+            margin-bottom: 20px;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(10deg); }
+            75% { transform: rotate(-10deg); }
+        }
+
+        .gacha-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .gacha-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .collection {
+            flex: 2;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .collection-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .collection-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .collection-item.obtained {
+            background: rgba(255,210,0,0.3);
+            border: 1px solid #ffd200;
+        }
+
+        .collection-item:not(.obtained) {
+            filter: grayscale(1);
+            opacity: 0.5;
+        }
+
+        /* 刮刮乐样式 */
+        .scratch-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+
+        .scratch-cell {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #808080, #404040);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .scratch-cell:hover {
+            transform: scale(1.05);
+        }
+
+        .scratch-cell.revealed {
+            background: linear-gradient(135deg, #ffd200, #f7971e);
+            animation: reveal 0.3s ease-out;
+        }
+
+        @keyframes reveal {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .win-animation {
+            animation: winPulse 0.5s ease-out;
+        }
+
+        @keyframes winPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); text-shadow: 0 0 20px gold; }
+        }
+
+        /* 彩票样式 */
+        .lottery-numbers {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 10px;
+            margin: 30px 0;
+        }
+
+        .lottery-number {
+            padding: 15px;
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid #ffd200;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .lottery-number.selected {
+            background: linear-gradient(135deg, #ffd200, #f7971e);
+            color: #333;
+            transform: scale(1.05);
+        }
+
+        .balls-result {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .ball {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, #ffd200, #f7971e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: ballPop 0.5s ease-out;
+        }
+
+        @keyframes ballPop {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* Toast通知 */
+        .toast {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.95);
+            color: #ffd200;
+            padding: 15px 30px;
+            border-radius: 50px;
+            z-index: 2000;
+            animation: slideIn 0.3s;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 1.1em;
+            white-space: nowrap;
+            border: 1px solid #ffd200;
+        }
+
+        @keyframes slideIn {
+            from {
+                top: 0;
+                opacity: 0;
+                transform: translateX(-50%) translateY(-50px);
+            }
+            to {
+                top: 100px;
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* 免责声明 */
+        .disclaimer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+            font-size: 0.85em;
+            color: rgba(255,255,255,0.5);
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .top-bar {
+                flex-direction: column;
+                text-align: center;
+                padding: 15px;
+            }
+
+            .games-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            .game-card {
+                padding: 15px;
+            }
+
+            .game-icon {
+                font-size: 3em;
+            }
+
+            .slot-symbol {
+                font-size: 2em;
+                width: 60px;
+                height: 60px;
+            }
+
+            .slot-reel {
+                padding: 10px;
+            }
+
+            .slots-machine {
+                gap: 10px;
+            }
+
+            .collection-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .lottery-numbers {
+                grid-template-columns: repeat(5, 1fr);
+            }
+
+            .toast {
+                white-space: normal;
+                text-align: center;
+                max-width: 90%;
+            }
+
+            .wheel-container {
+                width: 280px;
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo">🎮 ArcadeFun | 虚拟游戏厅</div>
+        <div class="coin-display" id="coinDisplay">🪙 300</div>
+        <div class="current-game" id="currentGame">游戏大厅</div>
+        <div class="top-buttons">
+            <button class="top-btn reset-btn" onclick="resetGame()">🔄 重置</button>
+            <button class="top-btn lobby-btn" onclick="showPage('lobby')">🏠 大厅</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 游戏大厅 -->
+        <div id="lobby" class="page active">
+            <div class="hero-section">
+                <h1 class="hero-title">🎮 ArcadeFun 虚拟游戏厅</h1>
+                <p class="hero-subtitle">选择游戏，开始您的娱乐之旅！所有游戏共用游戏币系统</p>
+            </div>
+            <div class="games-grid" id="gamesGrid"></div>
+        </div>
+
+        <!-- 老虎机页面 -->
+        <div id="slots" class="page">
+            <div class="game-container">
+                <h2 class="game-title">🎰 老虎机 Slots</h2>
+                <div class="leverage-selector" id="slotsLeverage"></div>
+                <div class="slots-machine" id="slotsMachine">
+                    <div class="slot-reel" id="reel0">
+                        <div class="slot-symbol" id="slot0_0">🎰</div>
+                        <div class="slot-symbol" id="slot0_1">7️⃣</div>
+                        <div class="slot-symbol" id="slot0_2">💎</div>
+                    </div>
+                    <div class="slot-reel" id="reel1">
+                        <div class="slot-symbol" id="slot1_0">🎰</div>
+                        <div class="slot-symbol" id="slot1_1">7️⃣</div>
+                        <div class="slot-symbol" id="slot1_2">💎</div>
+                    </div>
+                    <div class="slot-reel" id="reel2">
+                        <div class="slot-symbol" id="slot2_0">🎰</div>
+                        <div class="slot-symbol" id="slot2_1">7️⃣</div>
+                        <div class="slot-symbol" id="slot2_2">💎</div>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button class="play-btn" onclick="playSlots()">🎰 旋转拉霸 🎰</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 幸运轮盘页面 -->
+        <div id="wheel" class="page">
+            <div class="game-container">
+                <h2 class="game-title">🎡 幸运轮盘 Roulette</h2>
+                <div class="leverage-selector" id="wheelLeverage"></div>
+                <div class="wheel-wrapper">
+                    <div class="wheel-container">
+                        <canvas id="wheelCanvas" width="400" height="400"></canvas>
+                        <div class="wheel-pointer"></div>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button class="play-btn" onclick="spinWheel()">🎡 旋转轮盘 🎡</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 打气球页面 -->
+        <div id="balloons" class="page">
+            <div class="game-container">
+                <h2 class="game-title">🎈 打气球 Balloon Shooter</h2>
+                <div class="game-stats">
+                    <div>⏱️ 倒计时: <span id="balloonTimer">30</span>s</div>
+                    <div>🎯 得分: <span id="balloonScore">0</span> 🪙</div>
+                    <div class="difficulty-selector" id="difficultySelector">
+                        <button class="difficulty-btn active" data-diff="easy">🟢 简单</button>
+                        <button class="difficulty-btn" data-diff="normal">🟡 普通</button>
+                        <button class="difficulty-btn" data-diff="hard">🔴 困难</button>
+                    </div>
+                </div>
+                <div class="balloon-game-area" id="balloonArea"></div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="play-btn" id="startBalloonsBtn" onclick="startBalloons()">🎈 开始游戏 🎈</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 神秘宝箱页面 -->
+        <div id="chest" class="page">
+            <div class="game-container">
+                <h2 class="game-title">🎁 神秘宝箱 Mystery Chest</h2>
+                <div class="leverage-selector" id="chestLeverage"></div>
+                <div class="chest-container">
+                    <div class="chest" id="chestBox" onclick="openChest()">🎁</div>
+                    <div style="margin-top: 20px;">
+                        <button class="play-btn" onclick="openChest()">🎁 开启宝箱 🎁</button>
+                    </div>
+                    <div class="reward-history">
+                        <h3>📜 最近开箱记录</h3>
+                        <div id="chestHistory"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 涨跌猜页面 -->
+        <div id="updown" class="page">
+            <div class="game-container">
+                <h2 class="game-title">📈 涨跌猜 Up & Down</h2>
+                <div class="leverage-selector" id="updownLeverage"></div>
+                <div class="current-number" id="currentNumber">50</div>
+                <div class="guess-buttons">
+                    <button class="guess-btn guess-up" onclick="makeGuess('up')">📈 涨</button>
+                    <button class="guess-btn guess-down" onclick="makeGuess('down')">📉 跌</button>
+                </div>
+                <div class="trend-chart">
+                    <h3>📊 走势图</h3>
+                    <canvas id="trendCanvas" width="600" height="200" style="width:100%; height:200px"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 扭蛋机页面 -->
+        <div id="gacha" class="page">
+            <div class="game-container">
+                <h2 class="game-title">🥚 扭蛋机 Gacha</h2>
+                <div class="gacha-container">
+                    <div class="gacha-machine">
+                        <div class="gacha-icon">🥚</div>
+                        <div class="gacha-buttons">
+                            <button class="gacha-btn" onclick="drawGacha(1)">单抽 (15🪙)</button>
+                            <button class="gacha-btn" onclick="drawGacha(10)">十连抽 (135🪙)</button>
+                        </div>
+                    </div>
+                    <div class="collection">
+                        <h3>📚 扭蛋收集册</h3>
+                        <div class="collection-grid" id="collectionGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 刮刮乐页面 -->
+        <div id="scratch" class="page">
+            <div class="game-container">
+                <h2 class="game-title">🎫 刮刮乐 Scratch Card</h2>
+                <div class="leverage-selector" id="scratchLeverage"></div>
+                <div style="text-align: center;">
+                    <button class="play-btn" onclick="newScratchCard()">🎫 新卡片 (5🪙) 🎫</button>
+                </div>
+                <div class="scratch-grid" id="scratchGrid" style="margin-top: 30px;"></div>
+                <div id="scratchResult" style="text-align: center; margin-top: 20px; font-size: 1.2em;"></div>
+                <div id="scratchWinInfo" style="text-align: center; margin-top: 10px; color: #ffd200;"></div>
+            </div>
+        </div>
+
+        <!-- 体育彩票页面 -->
+        <div id="lottery" class="page">
+            <div class="game-container">
+                <h2 class="game-title">🏀 体育彩票 Lottery</h2>
+                <div class="leverage-selector" id="lotteryLeverage"></div>
+                <div class="lottery-numbers" id="lotteryNumbers"></div>
+                <div class="balls-result" id="lotteryBalls"></div>
+                <div style="text-align: center;">
+                    <button class="play-btn" onclick="playLottery()">🏀 开始摇奖 🏀</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="disclaimer">
+        ⚠️ 免责声明：本游戏厅纯属娱乐，所有游戏币均为虚拟，无任何真实货币价值。<br>
+        杠杆系统仅放大虚拟输赢，不代表真实收益。请理性娱乐，量力而行。仅限18岁以上用户使用。
+    </div>
+
+    <script>
+        // ==================== 全局变量 ====================
+        let currentCoins = 300;
+        let currentLeverage = {slots: 1, wheel: 1, chest: 1, updown: 1, scratch: 1, lottery: 1};
+        let spinning = false;
+        let gachaCollection = [];
+        let updownHistory = [50];
+        let currentUpdown = 50;
+        let balloonGameActive = false;
+        let balloonTimer = null;
+        let balloonScore = 0;
+        let balloons = [];
+        let scratchGrid = [];
+        let scratchRevealed = [];
+        let scratchCurrentLeverage = 1;
+        let scratchWinPaid = false;
+        let chestHistory = [];
+        let selectedLotteryNumber = null;
+
+        const leverageOptions = [1, 2, 3, 5, 8, 10];
+
+        // 扭蛋图鉴
+        const gachaItems = [
+            {id: 1, name: '小熊', icon: '🧸', rarity: '普通'},
+            {id: 2, name: '小猫', icon: '🐱', rarity: '普通'},
+            {id: 3, name: '小狗', icon: '🐶', rarity: '普通'},
+            {id: 4, name: '兔子', icon: '🐰', rarity: '普通'},
+            {id: 5, name: '企鹅', icon: '🐧', rarity: '稀有'},
+            {id: 6, name: '独角兽', icon: '🦄', rarity: '稀有'},
+            {id: 7, name: '小龙', icon: '🐉', rarity: '稀有'},
+            {id: 8, name: '机器人', icon: '🤖', rarity: '稀有'},
+            {id: 9, name: '外星人', icon: '👽', rarity: '史诗'},
+            {id: 10, name: '法师', icon: '🧙', rarity: '史诗'},
+            {id: 11, name: '金冠', icon: '👑', rarity: '传说'},
+            {id: 12, name: '彩虹星', icon: '🌟', rarity: '传说'}
+        ];
+
+        // 宝箱奖励
+        const chestRewards = [0, 5, 10, 15, 20, 30, 50, 100, 200, 500];
+        const chestProbabilities = [5, 10, 20, 20, 15, 10, 10, 7, 2, 1];
+
+        // 老虎机符号
+        const slotSymbols = ['🎰', '7️⃣', '💎', '💰', '⭐', '🔔', '🃏', '🎲', '🍒', '🍋', '🍊', '🍉', '🍇', '💵'];
+
+        // 刮刮乐符号
+        const scratchSymbols = ['💎', '⭐', '🍒', '🍋'];
+
+        // 轮盘扇形配置
+        const wheelSectors = [
+            {value: 200, color: '#FFD700', probability: 1},
+            {value: 100, color: '#FF4444', probability: 2},
+            {value: 50, color: '#FF8C00', probability: 2},
+            {value: 20, color: '#FFD700', probability: 2},
+            {value: 10, color: '#32CD32', probability: 2},
+            {value: 5, color: '#4169E1', probability: 2},
+            {value: 0, color: '#808080', probability: 1}
+        ];
+
+        // ==================== 工具函数 ====================
+        function showToast(message, isWin = true) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            if (isWin) {
+                const coinDisplay = document.getElementById('coinDisplay');
+                coinDisplay.classList.add('win-flash');
+                setTimeout(() => coinDisplay.classList.remove('win-flash'), 500);
+            }
+        }
+
+        function updateCoinDisplay() {
+            document.getElementById('coinDisplay').innerHTML = `🪙 ${currentCoins}`;
+        }
+
+        async function resetGame() {
+            currentCoins = 300;
+            gachaCollection = [];
+            chestHistory = [];
+            updownHistory = [50];
+            currentUpdown = 50;
+            updateCoinDisplay();
+            updateCollectionDisplay();
+            showToast('已重置为初始状态', false);
+            showPage('lobby');
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            const gameNames = {
+                lobby: '游戏大厅', slots: '老虎机', wheel: '幸运轮盘', balloons: '打气球',
+                chest: '神秘宝箱', updown: '涨跌猜', gacha: '扭蛋机', scratch: '刮刮乐', lottery: '体育彩票'
+            };
+            document.getElementById('currentGame').innerHTML = gameNames[pageId] || '游戏大厅';
+
+            if (pageId === 'gacha') updateCollectionDisplay();
+            if (pageId === 'updown') updateTrendChart();
+            if (pageId === 'lottery') initLotteryNumbers();
+        }
+
+        // ==================== 游戏大厅 ====================
+        function renderGamesGrid() {
+            const games = [
+                {id: 'slots', name: '老虎机', icon: '🎰', cost: '5', leverage: true, desc: '经典拉霸游戏'},
+                {id: 'wheel', name: '幸运轮盘', icon: '🎡', cost: '3', leverage: true, desc: '转出你的运气'},
+                {id: 'balloons', name: '打气球', icon: '🎈', cost: '2-5', leverage: false, desc: '考验你的反应'},
+                {id: 'chest', name: '神秘宝箱', icon: '🎁', cost: '10', leverage: true, desc: '惊喜大放送'},
+                {id: 'updown', name: '涨跌猜', icon: '📈', cost: '5', leverage: true, desc: '预测数字走势'},
+                {id: 'gacha', name: '扭蛋机', icon: '🥚', cost: '15', leverage: false, desc: '收集扭蛋图鉴'},
+                {id: 'scratch', name: '刮刮乐', icon: '🎫', cost: '5', leverage: true, desc: '即开即中奖'},
+                {id: 'lottery', name: '体育彩票', icon: '🏀', cost: '10', leverage: true, desc: '选号摇奖'}
+            ];
+
+            const grid = document.getElementById('gamesGrid');
+            grid.innerHTML = games.map(game => `
+                <div class="game-card" onclick="showPage('${game.id}')">
+                    <div class="game-icon">${game.icon}</div>
+                    <div class="game-name">${game.name}</div>
+                    <div class="game-cost">💰 消耗 ${game.cost}🪙</div>
+                    <div class="leverage-badge ${game.leverage ? 'yes' : 'no'}">
+                        ${game.leverage ? '⚡ 支持杠杆' : '❌ 不支持杠杆'}
+                    </div>
+                    <div style="font-size:0.85em; margin-bottom:10px; opacity:0.8;">${game.desc}</div>
+                    <button class="enter-btn">▶ 进入游戏</button>
+                </div>
+            `).join('');
+        }
+
+        // ==================== 老虎机 ====================
+        function initLeverageSelectors() {
+            const games = ['slots', 'wheel', 'chest', 'updown', 'scratch', 'lottery'];
+            games.forEach(game => {
+                const container = document.getElementById(`${game}Leverage`);
+                if (container) {
+                    container.innerHTML = '<span style="margin-right:15px;">⚡ 杠杆倍率:</span>' +
+                        leverageOptions.map(lev => `
+                            <button class="leverage-btn ${currentLeverage[game] === lev ? 'active' : ''}"
+                                    onclick="setLeverage('${game}', ${lev})">${lev}x</button>
+                        `).join('');
+                }
+            });
+        }
+
+        function setLeverage(game, level) {
+            currentLeverage[game] = level;
+            initLeverageSelectors();
+        }
+
+        async function playSlots() {
+            if (spinning) return;
+            const leverage = currentLeverage.slots;
+            const cost = 5 * leverage;
+
+            if (currentCoins < cost) {
+                showToast('游戏币不足，请重置或去其他游戏赚取', false);
+                return;
+            }
+
+            if (leverage >= 5 && !confirm(`您选择了${leverage}倍杠杆，本次消耗${cost}🪙，确定要继续吗？`)) return;
+
+            spinning = true;
+            const btn = document.querySelector('#slots .play-btn');
+            btn.disabled = true;
+
+            // 滚动动画
+            for (let spin = 0; spin < 20; spin++) {
+                for (let col = 0; col < 3; col++) {
+                    for (let row = 0; row < 3; row++) {
+                        const cell = document.getElementById(`slot${col}_${row}`);
+                        if (cell) cell.textContent = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                    }
+                }
+                await delay(50);
+            }
+
+            // 生成结果
+            const result = [];
+            for (let i = 0; i < 3; i++) {
+                result.push(slotSymbols[Math.floor(Math.random() * slotSymbols.length)]);
+            }
+
+            // 显示结果
+            for (let col = 0; col < 3; col++) {
+                for (let row = 0; row < 3; row++) {
+                    const cell = document.getElementById(`slot${col}_${row}`);
+                    if (cell && row === 1) cell.textContent = result[col];
+                }
+            }
+
+            // 计算奖励
+            let baseReward = 0;
+            if (result[0] === result[1] && result[1] === result[2]) {
+                if (result[0] === '🎰') baseReward = 500;
+                else if (result[0] === '7️⃣') baseReward = 300;
+                else if (result[0] === '💎') baseReward = 200;
+                else if (result[0] === '💰') baseReward = 150;
+                else if (result[0] === '⭐') baseReward = 100;
+                else baseReward = 40;
+            } else if (result[0] === result[1] || result[1] === result[2] || result[0] === result[2]) {
+                baseReward = 10;
+            }
+
+            const actualReward = baseReward * leverage;
+            currentCoins -= cost;
+            if (actualReward > 0) currentCoins += actualReward;
+            updateCoinDisplay();
+
+            // 高亮中奖行
+            if (actualReward > 0) {
+                for (let col = 0; col < 3; col++) {
+                    const cell = document.getElementById(`slot${col}_1`);
+                    if (cell) cell.classList.add('highlight');
+                }
+                setTimeout(() => {
+                    document.querySelectorAll('.slot-symbol').forEach(cell => cell.classList.remove('highlight'));
+                }, 1000);
+                showToast(`🎉 恭喜！获得 ${actualReward} 🪙！（含${leverage}倍杠杆）`);
+            } else {
+                showToast(`😢 很遗憾，未中奖`, false);
+            }
+
+            spinning = false;
+            btn.disabled = false;
+        }
+
+        // ==================== 幸运轮盘 ====================
+        let wheelCanvas, wheelCtx, wheelSpinning = false;
+        let currentWheelRotation = 0;
+
+        function initWheel() {
+            wheelCanvas = document.getElementById('wheelCanvas');
+            if (!wheelCanvas) return;
+            wheelCtx = wheelCanvas.getContext('2d');
+            drawWheel();
+        }
+
+        function drawWheel() {
+            const sectors = [];
+            // 构建扇形数组（12个扇形）
+            for (let i = 0; i < wheelSectors.length; i++) {
+                const sector = wheelSectors[i];
+                const count = sector.probability;
+                for (let j = 0; j < count; j++) {
+                    sectors.push({value: sector.value, color: sector.color});
+                }
+            }
+
+            const centerX = 200, centerY = 200, radius = 180;
+            const angleStep = (Math.PI * 2) / sectors.length;
+
+            wheelCtx.clearRect(0, 0, 400, 400);
+
+            for (let i = 0; i < sectors.length; i++) {
+                const startAngle = i * angleStep + currentWheelRotation;
+                const endAngle = (i + 1) * angleStep + currentWheelRotation;
+
+                wheelCtx.beginPath();
+                wheelCtx.moveTo(centerX, centerY);
+                wheelCtx.arc(centerX, centerY, radius, startAngle, endAngle);
+                wheelCtx.closePath();
+                wheelCtx.fillStyle = sectors[i].color;
+                wheelCtx.fill();
+                wheelCtx.strokeStyle = '#fff';
+                wheelCtx.lineWidth = 2;
+                wheelCtx.stroke();
+
+                wheelCtx.save();
+                wheelCtx.translate(centerX, centerY);
+                wheelCtx.rotate(startAngle + angleStep / 2);
+                wheelCtx.fillStyle = '#fff';
+                wheelCtx.font = 'bold 16px Arial';
+                wheelCtx.shadowBlur = 0;
+                wheelCtx.fillText(sectors[i].value, radius * 0.7, 8);
+                wheelCtx.restore();
+            }
+        }
+
+        async function spinWheel() {
+            if (wheelSpinning) return;
+            const leverage = currentLeverage.wheel;
+            const cost = 3 * leverage;
+
+            if (currentCoins < cost) {
+                showToast('游戏币不足，请重置或去其他游戏赚取', false);
+                return;
+            }
+
+            wheelSpinning = true;
+            const btn = document.querySelector('#wheel .play-btn');
+            btn.disabled = true;
+
+            // 随机生成最终奖励
+            const sectors = [];
+            for (let i = 0; i < wheelSectors.length; i++) {
+                const sector = wheelSectors[i];
+                const count = sector.probability;
+                for (let j = 0; j < count; j++) {
+                    sectors.push({value: sector.value, color: sector.color});
+                }
+            }
+
+            // 随机选择最终停留的扇形
+            const targetIndex = Math.floor(Math.random() * sectors.length);
+            const targetReward = sectors[targetIndex].value;
+
+            // 计算需要旋转的角度
+            const totalSpins = 10 + Math.random() * 5; // 10-15圈
+            const targetAngle = (Math.PI * 2 * totalSpins) + (Math.PI * 2 * (targetIndex / sectors.length));
+            const startRotation = currentWheelRotation;
+            const duration = 3000;
+            const startTime = Date.now();
+
+            return new Promise((resolve) => {
+                function animate() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(1, elapsed / duration);
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    currentWheelRotation = startRotation + (targetAngle * easeOut);
+                    drawWheel();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        // 游戏结算
+                        const actualReward = targetReward * leverage;
+                        currentCoins -= cost;
+                        if (actualReward > 0) currentCoins += actualReward;
+                        updateCoinDisplay();
+                        showToast(`🎡 指针指向 ${targetReward} 🪙！实际获得 ${actualReward} 🪙（含${leverage}倍杠杆）`);
+
+                        wheelSpinning = false;
+                        btn.disabled = false;
+                        resolve();
+                    }
+                }
+                animate();
+            });
+        }
+
+        // ==================== 打气球 ====================
+        const difficultySettings = {
+            easy: {cost: 2, speed: 3, score: 5, maxBalloons: 3, interval: 1000},
+            normal: {cost: 3, speed: 2, score: 8, maxBalloons: 4, interval: 800},
+            hard: {cost: 5, speed: 1, score: 12, maxBalloons: 5, interval: 600}
+        };
+        let currentDifficulty = 'easy';
+
+        function initBalloons() {
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentDifficulty = btn.dataset.diff;
+                };
+            });
+        }
+
+        async function startBalloons() {
+            if (balloonGameActive) return;
+            const settings = difficultySettings[currentDifficulty];
+
+            if (currentCoins < settings.cost) {
+                showToast('游戏币不足', false);
+                return;
+            }
+
+            currentCoins -= settings.cost;
+            updateCoinDisplay();
+
+            balloonGameActive = true;
+            balloonScore = 0;
+            document.getElementById('balloonScore').innerHTML = '0';
+
+            let timeLeft = 30;
+            document.getElementById('balloonTimer').innerHTML = timeLeft;
+
+            const timerInterval = setInterval(() => {
+                if (!balloonGameActive) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                timeLeft--;
+                document.getElementById('balloonTimer').innerHTML = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endBalloonsGame();
+                }
+            }, 1000);
+
+            const balloonInterval = setInterval(() => {
+                if (!balloonGameActive) {
+                    clearInterval(balloonInterval);
+                    return;
+                }
+                if (balloons.length < settings.maxBalloons) {
+                    createBalloon(settings);
+                }
+            }, settings.interval);
+        }
+
+        function createBalloon(settings) {
+            const area = document.getElementById('balloonArea');
+            const balloon = document.createElement('div');
+            const colors = ['🔴', '🔵', '🟢', '🟡', '🟣'];
+            balloon.className = 'balloon';
+            balloon.innerHTML = colors[Math.floor(Math.random() * colors.length)];
+            balloon.style.fontSize = '40px';
+            balloon.style.left = Math.random() * (area.clientWidth - 50) + 'px';
+            balloon.style.bottom = '0px';
+            balloon.style.position = 'absolute';
+
+            let pos = 0;
+            const moveInterval = setInterval(() => {
+                if (!balloonGameActive || !balloon.parentNode) {
+                    clearInterval(moveInterval);
+                    return;
+                }
+                pos += settings.speed;
+                balloon.style.bottom = pos + 'px';
+                if (pos > area.clientHeight) {
+                    clearInterval(moveInterval);
+                    balloon.remove();
+                    balloons = balloons.filter(b => b !== balloon);
+                }
+            }, 20);
+
+            balloon.onclick = (e) => {
+                e.stopPropagation();
+                clearInterval(moveInterval);
+                balloon.style.animation = 'burst 0.2s ease-out';
+                balloonScore += settings.score;
+                document.getElementById('balloonScore').innerHTML = balloonScore;
+                setTimeout(() => balloon.remove(), 200);
+                balloons = balloons.filter(b => b !== balloon);
+            };
+
+            area.appendChild(balloon);
+            balloons.push(balloon);
+        }
+
+        function endBalloonsGame() {
+            balloonGameActive = false;
+            balloons.forEach(balloon => balloon.remove());
+            balloons = [];
+            currentCoins += balloonScore;
+            updateCoinDisplay();
+            showToast(`游戏结束！获得 ${balloonScore} 🪙！`);
+        }
+
+        // ==================== 神秘宝箱 ====================
+        async function openChest() {
+            const leverage = currentLeverage.chest;
+            const cost = 10 * leverage;
+
+            if (currentCoins < cost) {
+                showToast('游戏币不足', false);
+                return;
+            }
+
+            const chest = document.getElementById('chestBox');
+            chest.classList.add('chest-open');
+
+            setTimeout(async () => {
+                // 随机奖励
+                const rand = Math.random() * 100;
+                let cumulative = 0;
+                let baseReward = 0;
+                for (let i = 0; i < chestRewards.length; i++) {
+                    cumulative += chestProbabilities[i];
+                    if (rand <= cumulative) {
+                        baseReward = chestRewards[i];
+                        break;
+                    }
+                }
+
+                const actualReward = baseReward * leverage;
+                currentCoins -= cost;
+                if (actualReward > 0) currentCoins += actualReward;
+                updateCoinDisplay();
+
+                chestHistory.unshift(`${baseReward}🪙 ×${leverage}=${actualReward}🪙`);
+                if (chestHistory.length > 5) chestHistory.pop();
+                document.getElementById('chestHistory').innerHTML = chestHistory.map(h => `<div>🎁 ${h}</div>`).join('');
+
+                showToast(`🎁 宝箱开启！获得 ${actualReward} 🪙！（含${leverage}倍杠杆）`);
+                chest.classList.remove('chest-open');
+            }, 500);
+        }
+
+        // ==================== 涨跌猜 ====================
+        async function makeGuess(guess) {
+            const leverage = currentLeverage.updown;
+            const cost = 5 * leverage;
+
+            if (currentCoins < cost) {
+                showToast('游戏币不足', false);
+                return;
+            }
+
+            const newValue = currentUpdown + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 20) + 1);
+            const finalValue = Math.max(1, Math.min(100, newValue));
+
+            let won = false;
+            if (guess === 'up' && finalValue > currentUpdown) won = true;
+            if (guess === 'down' && finalValue < currentUpdown) won = true;
+
+            if (won) {
+                const reward = 10 * leverage;
+                currentCoins -= cost;
+                currentCoins += reward;
+                showToast(`📈 猜对了！获得 ${reward} 🪙！`);
+            } else {
+                currentCoins -= cost;
+                showToast(`📉 猜错了，下次加油！`, false);
+            }
+
+            updateCoinDisplay();
+            currentUpdown = finalValue;
+            document.getElementById('currentNumber').innerHTML = currentUpdown;
+
+            updownHistory.push(currentUpdown);
+            if (updownHistory.length > 10) updownHistory.shift();
+            updateTrendChart();
+        }
+
+        function updateTrendChart() {
+            const canvas = document.getElementById('trendCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (updownHistory.length < 2) return;
+
+            const step = width / (updownHistory.length - 1);
+            ctx.beginPath();
+            ctx.strokeStyle = '#ffd200';
+            ctx.lineWidth = 3;
+
+            for (let i = 0; i < updownHistory.length; i++) {
+                const x = i * step;
+                const y = height - (updownHistory[i] / 100) * height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        // ==================== 扭蛋机 ====================
+        function getRandomGachaItem() {
+            const rand = Math.random() * 100;
+            let cumulative = 0;
+            const probabilities = [15, 15, 15, 15, 10, 8, 7, 6, 4, 3, 1.5, 0.5];
+            for (let i = 0; i < gachaItems.length; i++) {
+                cumulative += probabilities[i];
+                if (rand <= cumulative) return gachaItems[i];
+            }
+            return gachaItems[0];
+        }
+
+        async function drawGacha(count) {
+            const cost = count === 1 ? 15 : 135;
+
+            if (currentCoins < cost) {
+                showToast('游戏币不足', false);
+                return;
+            }
+
+            currentCoins -= cost;
+            const results = [];
+            let newItems = [];
+
+            for (let i = 0; i < count; i++) {
+                const item = getRandomGachaItem();
+                results.push(item);
+                if (!gachaCollection.includes(item.id)) {
+                    gachaCollection.push(item.id);
+                    newItems.push(item);
+                }
+            }
+
+            const extraReward = count === 1 ? Math.floor(Math.random() * 11) + 5 : Math.floor(Math.random() * 51) + 50;
+            currentCoins += extraReward;
+            updateCoinDisplay();
+            updateCollectionDisplay();
+
+            const itemNames = results.map(r => r.icon).join(', ');
+            showToast(`🥚 获得 ${itemNames}！+额外 ${extraReward} 🪙`);
+            if (newItems.length > 0) showToast(`✨ 获得新扭蛋：${newItems.map(i => i.name).join(', ')}！✨`);
+        }
+
+        function updateCollectionDisplay() {
+            const grid = document.getElementById('collectionGrid');
+            if (!grid) return;
+
+            grid.innerHTML = gachaItems.map(item => `
+                <div class="collection-item ${gachaCollection.includes(item.id) ? 'obtained' : ''}">
+                    <div style="font-size: 2em;">${item.icon}</div>
+                    <div>${item.name}</div>
+                    <div style="font-size: 0.8em; opacity: 0.7;">${item.rarity}</div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== 刮刮乐 ====================
+        async function newScratchCard() {
+            const leverage = currentLeverage.scratch;
+            const cost = 5 * leverage;
+
+            if (currentCoins < cost) {
+                showToast('游戏币不足', false);
+                return;
+            }
+
+            currentCoins -= cost;
+            updateCoinDisplay();
+
+            scratchCurrentLeverage = leverage;
+            scratchWinPaid = false;
+            scratchGrid = [];
+
+            // 随机生成卡片，保证有一定概率中奖
+            const hasWin = Math.random() < 0.35; // 35%中奖概率
+
+            if (hasWin) {
+                // 确保中奖：随机选择一个中奖组合
+                const winSymbols = ['💎', '⭐', '🍒', '🍋'];
+                const winSymbol = winSymbols[Math.floor(Math.random() * winSymbols.length)];
+                const winPosition = Math.floor(Math.random() * 3); // 0:行,1:列,2:对角线
+
+                if (winPosition === 0) {
+                    // 某一行中奖
+                    const row = Math.floor(Math.random() * 3);
+                    for (let i = 0; i < 3; i++) {
+                        scratchGrid[row * 3 + i] = winSymbol;
+                    }
+                    // 填充其他格子
+                    for (let i = 0; i < 9; i++) {
+                        if (!scratchGrid[i]) scratchGrid[i] = scratchSymbols[Math.floor(Math.random() * scratchSymbols.length)];
+                    }
+                } else if (winPosition === 1) {
+                    // 某一列中奖
+                    const col = Math.floor(Math.random() * 3);
+                    for (let i = 0; i < 3; i++) {
+                        scratchGrid[col + i * 3] = winSymbol;
+                    }
+                    for (let i = 0; i < 9; i++) {
+                        if (!scratchGrid[i]) scratchGrid[i] = scratchSymbols[Math.floor(Math.random() * scratchSymbols.length)];
+                    }
+                } else {
+                    // 对角线中奖
+                    scratchGrid[0] = winSymbol;
+                    scratchGrid[4] = winSymbol;
+                    scratchGrid[8] = winSymbol;
+                    for (let i = 0; i < 9; i++) {
+                        if (!scratchGrid[i]) scratchGrid[i] = scratchSymbols[Math.floor(Math.random() * scratchSymbols.length)];
+                    }
+                }
+            } else {
+                // 不中奖，随机生成
+                for (let i = 0; i < 9; i++) {
+                    scratchGrid.push(scratchSymbols[Math.floor(Math.random() * scratchSymbols.length)]);
+                }
+            }
+
+            scratchRevealed = [false, false, false, false, false, false, false, false, false];
+
+            renderScratchGrid();
+            document.getElementById('scratchResult').innerHTML = '';
+            document.getElementById('scratchWinInfo').innerHTML = '';
+            showToast('新刮刮卡已准备好！');
+        }
+
+        function renderScratchGrid() {
+            const grid = document.getElementById('scratchGrid');
+            grid.innerHTML = scratchGrid.map((symbol, index) => `
+                <div class="scratch-cell ${scratchRevealed[index] ? 'revealed' : ''}" onclick="revealCell(${index})">
+                    ${scratchRevealed[index] ? symbol : '❓'}
+                </div>
+            `).join('');
+        }
+
+        function revealCell(index) {
+            if (scratchRevealed[index]) return;
+            scratchRevealed[index] = true;
+            renderScratchGrid();
+
+            // 检查是否中奖
+            if (!scratchWinPaid) {
+                let winAmount = 0;
+                let winSymbol = '';
+
+                // 检查所有行
+                for (let row = 0; row < 3; row++) {
+                    const start = row * 3;
+                    if (scratchRevealed[start] && scratchRevealed[start+1] && scratchRevealed[start+2] &&
+                        scratchGrid[start] === scratchGrid[start+1] && scratchGrid[start+1] === scratchGrid[start+2]) {
+                        winSymbol = scratchGrid[start];
+                        if (winSymbol === '💎') winAmount = 100;
+                        else if (winSymbol === '⭐') winAmount = 50;
+                        else if (winSymbol === '🍒') winAmount = 30;
+                        else if (winSymbol === '🍋') winAmount = 20;
+                        break;
+                    }
+                }
+
+                // 检查所有列
+                if (winAmount === 0) {
+                    for (let col = 0; col < 3; col++) {
+                        if (scratchRevealed[col] && scratchRevealed[col+3] && scratchRevealed[col+6] &&
+                            scratchGrid[col] === scratchGrid[col+3] && scratchGrid[col+3] === scratchGrid[col+6]) {
+                            winSymbol = scratchGrid[col];
+                            if (winSymbol === '💎') winAmount = 100;
+                            else if (winSymbol === '⭐') winAmount = 50;
+                            else if (winSymbol === '🍒') winAmount = 30;
+                            else if (winSymbol === '🍋') winAmount = 20;
+                            break;
+                        }
+                    }
+                }
+
+                // 检查对角线
+                if (winAmount === 0) {
+                    if (scratchRevealed[0] && scratchRevealed[4] && scratchRevealed[8] &&
+                        scratchGrid[0] === scratchGrid[4] && scratchGrid[4] === scratchGrid[8]) {
+                        winSymbol = scratchGrid[0];
+                        if (winSymbol === '💎') winAmount = 100;
+                        else if (winSymbol === '⭐') winAmount = 50;
+                        else if (winSymbol === '🍒') winAmount = 30;
+                        else if (winSymbol === '🍋') winAmount = 20;
+                    } else if (scratchRevealed[2] && scratchRevealed[4] && scratchRevealed[6] &&
+                        scratchGrid[2] === scratchGrid[4] && scratchGrid[4] === scratchGrid[6]) {
+                        winSymbol = scratchGrid[2];
+                        if (winSymbol === '💎') winAmount = 100;
+                        else if (winSymbol === '⭐') winAmount = 50;
+                        else if (winSymbol === '🍒') winAmount = 30;
+                        else if (winSymbol === '🍋') winAmount = 20;
+                    }
+                }
+
+                if (winAmount > 0) {
+                    scratchWinPaid = true;
+                    const actualWin = winAmount * scratchCurrentLeverage;
+                    currentCoins += actualWin;
+                    updateCoinDisplay();
+
+                    // 高亮所有中奖格子
+                    document.querySelectorAll('.scratch-cell').forEach((cell, i) => {
+                        if (scratchRevealed[i]) {
+                            cell.classList.add('win-animation');
+                        }
+                    });
+
+                    document.getElementById('scratchResult').innerHTML = `<div style="color:#ffd200; font-size:1.3em;">🎉 恭喜中奖！获得 ${actualWin} 🪙！ 🎉</div>`;
+                    document.getElementById('scratchWinInfo').innerHTML = `<div style="font-size:1em;">中奖组合：三个${winSymbol}！杠杆倍率：${scratchCurrentLeverage}x</div>`;
+                    showToast(`🎉 刮出大奖！获得 ${actualWin} 🪙！`);
+
+                    setTimeout(() => {
+                        document.querySelectorAll('.scratch-cell').forEach(cell => cell.classList.remove('win-animation'));
+                    }, 1000);
+                } else if (scratchRevealed.every(r => r === true)) {
+                    document.getElementById('scratchResult').innerHTML = `<div style="color:#ff6b6b;">😢 很遗憾，没有中奖，下次好运！</div>`;
+                }
+            }
+        }
+
+        // ==================== 体育彩票 ====================
+        function initLotteryNumbers() {
+            const container = document.getElementById('lotteryNumbers');
+            if (!container) return;
+
+            container.innerHTML = '';
+            for (let i = 1; i <= 20; i++) {
+                const btn = document.createElement('div');
+                btn.className = 'lottery-number';
+                btn.textContent = i;
+                btn.onclick = () => {
+                    document.querySelectorAll('.lottery-number').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedLotteryNumber = i;
+                };
+                container.appendChild(btn);
+            }
+        }
+
+        async function playLottery() {
+            if (!selectedLotteryNumber) {
+                showToast('请先选择一个数字！', false);
+                return;
+            }
+
+            const leverage = currentLeverage.lottery;
+            const cost = 10 * leverage;
+
+            if (currentCoins < cost) {
+                showToast('游戏币不足', false);
+                return;
+            }
+
+            currentCoins -= cost;
+            updateCoinDisplay();
+
+            // 摇奖动画
+            const ballsContainer = document.getElementById('lotteryBalls');
+            ballsContainer.innerHTML = '';
+
+            const balls = [];
+            for (let i = 0; i < 3; i++) {
+                await delay(500);
+                const ball = document.createElement('div');
+                ball.className = 'ball';
+                const randomBall = Math.floor(Math.random() * 20) + 1;
+                ball.textContent = randomBall;
+                ballsContainer.appendChild(ball);
+                balls.push(randomBall);
+            }
+
+            const matches = balls.filter(b => b === selectedLotteryNumber).length;
+
+            let baseReward = 0;
+            if (matches === 3) baseReward = 200;
+            else if (matches === 2) baseReward = 50;
+            else if (matches === 1) baseReward = 10;
+
+            const actualReward = baseReward * leverage;
+            if (actualReward > 0) currentCoins += actualReward;
+            updateCoinDisplay();
+
+            if (actualReward > 0) {
+                showToast(`🏀 摇出：${balls.join(', ')} | 匹配${matches}个 | 获得${actualReward}🪙`);
+            } else {
+                showToast(`🏀 摇出：${balls.join(', ')} | 匹配${matches}个 | 未中奖`, false);
+            }
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            renderGamesGrid();
+            initLeverageSelectors();
+            initWheel();
+            initBalloons();
+            initLotteryNumbers();
+            updateCollectionDisplay();
+            updateTrendChart();
+        });
+    </script>
+</body>
+</html>
