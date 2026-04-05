@@ -336,6 +336,28 @@
             transition: all 0.1s;
         }
 
+        .slot-payline-wrap {
+            position: relative;
+            margin: 8px 0;
+        }
+
+        .slot-payline-wrap .slot-symbol {
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slot-payline-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 0;
+            background: linear-gradient(180deg, rgba(255,210,0,0.14), rgba(255,210,0,0.32));
+            border: 2px solid rgba(255,210,0,0.55);
+            box-shadow: inset 0 0 18px rgba(255,210,0,0.28);
+        }
+
         .slot-symbol.highlight {
             background: #ffd200;
             box-shadow: 0 0 20px #ffd200;
@@ -853,17 +875,26 @@
                 <div class="slots-machine" id="slotsMachine">
                     <div class="slot-reel" id="reel0">
                         <div class="slot-symbol" id="slot0_0">🎰</div>
-                        <div class="slot-symbol" id="slot0_1">7️⃣</div>
+                        <div class="slot-payline-wrap">
+                            <div class="slot-payline-overlay" aria-hidden="true"></div>
+                            <div class="slot-symbol" id="slot0_1">7️⃣</div>
+                        </div>
                         <div class="slot-symbol" id="slot0_2">💎</div>
                     </div>
                     <div class="slot-reel" id="reel1">
                         <div class="slot-symbol" id="slot1_0">🎰</div>
-                        <div class="slot-symbol" id="slot1_1">7️⃣</div>
+                        <div class="slot-payline-wrap">
+                            <div class="slot-payline-overlay" aria-hidden="true"></div>
+                            <div class="slot-symbol" id="slot1_1">7️⃣</div>
+                        </div>
                         <div class="slot-symbol" id="slot1_2">💎</div>
                     </div>
                     <div class="slot-reel" id="reel2">
                         <div class="slot-symbol" id="slot2_0">🎰</div>
-                        <div class="slot-symbol" id="slot2_1">7️⃣</div>
+                        <div class="slot-payline-wrap">
+                            <div class="slot-payline-overlay" aria-hidden="true"></div>
+                            <div class="slot-symbol" id="slot2_1">7️⃣</div>
+                        </div>
                         <div class="slot-symbol" id="slot2_2">💎</div>
                     </div>
                 </div>
@@ -1238,6 +1269,33 @@
             drawWheel();
         }
 
+        /** 与 canvas.arc 一致：从圆心指向该点的角度（0=3 点方向，顺时针为正） */
+        function getWheelPointerAngleRad() {
+            if (!wheelCanvas) return -Math.PI / 2;
+            const c = wheelCanvas.getBoundingClientRect();
+            const ptr = document.querySelector('.wheel-pointer');
+            if (!ptr || c.width < 2 || c.height < 2) return -Math.PI / 2;
+            const p = ptr.getBoundingClientRect();
+            const cx = c.left + c.width / 2;
+            const cy = c.top + c.height / 2;
+            const tipX = p.width > 0 ? p.left + p.width / 2 : cx;
+            const tipY = p.height > 0 ? p.bottom : c.top;
+            const dx = tipX - cx;
+            const dy = tipY - cy;
+            if (Math.abs(dx) < 1e-4 && Math.abs(dy) < 1e-4) return -Math.PI / 2;
+            return Math.atan2(dy, dx);
+        }
+
+        function winningWheelIndex(rotation, sectorCount, pointerAngle) {
+            const twoPi = Math.PI * 2;
+            const step = twoPi / sectorCount;
+            let br = pointerAngle - rotation;
+            br = ((br % twoPi) + twoPi) % twoPi;
+            let idx = Math.floor(br / step);
+            if (idx >= sectorCount) idx = sectorCount - 1;
+            return idx;
+        }
+
         function drawWheel() {
             const sectors = [];
             // 构建扇形数组（12个扇形）
@@ -1305,12 +1363,22 @@
 
             // 随机选择最终停留的扇形
             const targetIndex = Math.floor(Math.random() * sectors.length);
-            const targetReward = sectors[targetIndex].value;
 
-            // 计算需要旋转的角度
-            const totalSpins = 10 + Math.random() * 5; // 10-15圈
-            const targetAngle = (Math.PI * 2 * totalSpins) + (Math.PI * 2 * (targetIndex / sectors.length));
+            const n = sectors.length;
+            const angleStep = (Math.PI * 2) / n;
+            const pointerAngle = getWheelPointerAngleRad();
+            const desiredEndRotation = pointerAngle - (targetIndex + 0.5) * angleStep;
+            const fullSpins = 10 + Math.random() * 5;
+            const mod2pi = (x) => ((x % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
             const startRotation = currentWheelRotation;
+            let targetRotation = startRotation + fullSpins * (Math.PI * 2) + mod2pi(desiredEndRotation - startRotation);
+            let resolved = winningWheelIndex(targetRotation, n, pointerAngle);
+            let fixGuard = 0;
+            while (resolved !== targetIndex && fixGuard++ < n + 2) {
+                targetRotation -= (targetIndex - resolved) * angleStep;
+                resolved = winningWheelIndex(targetRotation, n, pointerAngle);
+            }
+            const rotationDelta = targetRotation - startRotation;
             const duration = 3000;
             const startTime = Date.now();
 
@@ -1319,18 +1387,22 @@
                     const elapsed = Date.now() - startTime;
                     const progress = Math.min(1, elapsed / duration);
                     const easeOut = 1 - Math.pow(1 - progress, 3);
-                    currentWheelRotation = startRotation + (targetAngle * easeOut);
+                    currentWheelRotation = startRotation + rotationDelta * easeOut;
                     drawWheel();
 
                     if (progress < 1) {
                         requestAnimationFrame(animate);
                     } else {
-                        // 游戏结算
-                        const actualReward = targetReward * leverage;
+                        currentWheelRotation = targetRotation;
+                        drawWheel();
+                        const payPointer = getWheelPointerAngleRad();
+                        const payIndex = winningWheelIndex(currentWheelRotation, n, payPointer);
+                        const payValue = sectors[payIndex].value;
+                        const actualReward = payValue * leverage;
                         currentCoins -= cost;
                         if (actualReward > 0) currentCoins += actualReward;
                         updateCoinDisplay();
-                        showToast(`🎡 指针指向 ${targetReward} 🪙！实际获得 ${actualReward} 🪙（含${leverage}倍杠杆）`);
+                        showToast(`🎡 指针指向 ${payValue} 🪙！实际获得 ${actualReward} 🪙（含${leverage}倍杠杆）`);
 
                         wheelSpinning = false;
                         btn.disabled = false;
